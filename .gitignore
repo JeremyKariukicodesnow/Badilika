@@ -1,0 +1,22 @@
+﻿__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.DS_Store
+Thumbs.db
+
+# Android generated output and local signing material
+mobile/build/
+mobile/dist/
+mobile/local.properties
+*.jks
+*.keystore
+.vercel/
+desktop/build/
+desktop/dist/
+desktop/*.exe
+desktop/build-exe.log

@@ -1,0 +1,15 @@
+<resources>
+    <style name="BadilikaTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#184838</item>
+        <item name="android:windowBackground">#F5F7EF</item>
+        <item name="android:colorControlHighlight">#24184838</item>
+    </style>
+    <style name="BadilikaClockDialog" parent="@android:style/Theme.Material.Light.Dialog.Alert">
+        <item name="android:timePickerStyle">@style/BadilikaClock</item>
+        <item name="android:colorAccent">#184838</item>
+    </style>
+    <style name="BadilikaClock" parent="@android:style/Widget.Material.Light.TimePicker">
+        <item name="android:timePickerMode">clock</item>
+    </style>
+</resources>

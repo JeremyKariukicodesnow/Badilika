@@ -1,0 +1,6 @@
+const loading=document.createElement('div');loading.className='loading-line';loading.setAttribute('aria-hidden','true');document.body.prepend(loading);setTimeout(()=>loading.remove(),1000);
+const navDownload=document.createElement('a');navDownload.href='/downloads/Badilika-1.5.2.apk';navDownload.className='nav-download';navDownload.textContent='Download ↓';document.querySelector('.links').append(navDownload);
+const heroDownload=document.querySelector('.hero .button');heroDownload.href='/downloads/Badilika-1.5.2.apk';heroDownload.setAttribute('download','');
+const note=document.createElement('p');note.className='hero-note';note.textContent='Free · No ads · Android 6+ · Not yet on Google Play';heroDownload.after(note);
+const observer=new IntersectionObserver(entries=>{for(const e of entries)if(e.isIntersecting){e.target.classList.add('reveal');observer.unobserve(e.target)}},{threshold:.08});document.querySelectorAll('.section,.card').forEach(el=>observer.observe(el));
+document.querySelectorAll('a[download],.nav-download').forEach(link=>link.addEventListener('click',()=>{const original=link.textContent;link.classList.add('busy');link.textContent='Starting download…';setTimeout(()=>{link.textContent=original;link.classList.remove('busy')},1800)}));

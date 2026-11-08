@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Badilika</string>
+    <string name="analog_clock_name">Badilika Analog Clock</string>
+    <string name="limits_summary">Daily app timers and automatic return to Home</string>
+    <string name="limits_description">With your permission, Badilika observes app switches and reads Android usage statistics to enforce the daily timers you choose. When time is used up, it returns you to Home when the limited app is open, including on reopening. It does not read screen text, passwords or messages. Usage stays on this phone. Disable this service in Accessibility settings whenever you choose.</string>
+</resources>

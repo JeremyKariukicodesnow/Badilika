@@ -1,0 +1,25 @@
+name: Validate Android policies and website
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Test timer and DNS policies
+        run: |
+          mkdir -p /tmp/badilika-tests
+          javac -d /tmp/badilika-tests mobile/src/com/badilika/mobile/{DnsPacket,TimePolicy,AppBudget,ForegroundClock}.java mobile/tests/PolicyTests.java
+          java -cp /tmp/badilika-tests PolicyTests
+      - name: Check website scripts and downloads
+        run: |
+          node --check website/download.js
+          node --check website/motion.js
+          test -s website/downloads/Badilika-1.5.2.apk
+          test -s website/sitemap.xml
