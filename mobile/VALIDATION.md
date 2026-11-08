@@ -87,3 +87,11 @@ App closing uses Home navigation, not force-stop; background audio/downloads may
 Badilika.apk (1.1): 78A912F9A4F66344965B22F442BA06AFDF8CAA1F36680CC3A14A43C12E878D05
 
 Run ./mobile/test.ps1 for host checks. Build, connect an isolated Android test device and run ./mobile/test-device.ps1 for integration checks. Do not run device tests against a personal installation with important rules or history.
+# Version 1.6 — interactive setup
+
+- Java/D8 APK build completed; v1, v2 and v3 signatures verified with the existing local key.
+- Existing host policy/DNS tests: 69 checks passed.
+- Android 15 emulator: 18 dedicated interactive-guide checks passed, including all seven step actions, saved progress, opening Protect and returning to the same guide step, finishing guide mode, and preservation of saved allowance/protection configuration.
+- Guide screenshot inspected for layout and readable controls. Manufacturer-specific Android settings and physical devices were not exhaustively tested.
+- Guide actions open Android settings or the real app screens; they do not silently grant permissions, enable categories or reset timers.
+

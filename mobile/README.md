@@ -1,5 +1,13 @@
 # Badilika for Android — Java edition
 
+## Version 1.6: interactive setup
+
+Open **Settings → Setup guide** for seven visual steps with live status, numbered instructions, progress buttons and direct actions. Usage access, Accessibility, VPN, network, notification and app settings open the relevant Android controls where supported. Protection and timer actions open the real Badilika screens; **Continue setup guide** returns to the saved step.
+
+The guide can be skipped or reopened. It does not enable protection, change saved allowances, start cooldowns or grant permissions on the user's behalf. Permissions are checked again when the app resumes; Android screen names vary by manufacturer.
+
+Download the latest APK from https://badilika.sparkfield.co.ke. Install over the existing app with the same signing key to preserve local records.
+
 One combined app targeting **Android 6.0 and newer**:
 
 | APK | Purpose |

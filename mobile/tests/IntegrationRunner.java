@@ -15,6 +15,7 @@ public class IntegrationRunner extends Instrumentation {
     public void onCreate(Bundle args){super.onCreate(args);if(args!=null)mode=args.getString("mode","full");start();}
     public void onStart(){Bundle result=new Bundle();try{
         Context c=getTargetContext();
+        if(mode.equals("guide")){testGuide(c);result.putString("stream","PASS: "+checks+" interactive guide checks\n");finish(Activity.RESULT_OK,result);return;}
         if(mode.equals("ui-seed")){c.getSharedPreferences("goals",0).edit().clear().putString("com.badilika.timerfixture","0,30").commit();c.getSharedPreferences("settings",0).edit().putBoolean("limitsEnabled",false).commit();TimerLocks.lock(c,"com.badilika.timerfixture").cancel();result.putString("stream","PASS: isolated UI fixture prepared");finish(Activity.RESULT_OK,result);return;}
         if(mode.startsWith("upgrade-")){upgrade(c,mode.equals("upgrade-seed"));result.putString("stream","PASS: "+checks+" "+mode+" checks\n");finish(Activity.RESULT_OK,result);return;}
         c.getSharedPreferences("settings",0).edit().putBoolean("limitsEnabled",false).commit();c.getSharedPreferences("locks",0).edit().clear().commit();
@@ -38,6 +39,18 @@ public class IntegrationRunner extends Instrumentation {
         testAppTimer(c);
         result.putString("stream","PASS: "+checks+" Android integration checks\n");finish(Activity.RESULT_OK,result);
     }catch(Throwable ex){result.putString("stream","FAIL after "+checks+" checks: "+android.util.Log.getStackTraceString(ex));finish(Activity.RESULT_CANCELED,result);}}
+    private void testGuide(Context c)throws Exception{
+        String goals=snapshot(c,"goals"),locks=snapshot(c,"locks");
+        c.getSharedPreferences("settings",0).edit().putBoolean("guide_seen",true).putBoolean("guide_active",true).putInt("guide_step",0).commit();
+        Activity a=startActivitySync(new Intent().setClassName(c.getPackageName(),"com.badilika.mobile.MainActivity").putExtra("screen","Guide").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));waitForIdleSync();
+        String[] actions={"Next step","Open Usage access settings","Enable automatic closing","Open Protect and choose categories","Choose an app and set a timer","Open app timers and cooldowns","Set up notifications"};
+        for(int step=0;step<7;step++){final int index=step;runOnMainSync(()->check(find(a.getWindow().getDecorView(),actions[index])!=null,"Real action present on step "+index));
+            if(step==3){runOnMainSync(()->find(a.getWindow().getDecorView(),actions[index]).performClick());waitForIdleSync();runOnMainSync(()->{View label=find(a.getWindow().getDecorView(),"Continue setup guide");check(label!=null,"Return-to-guide control appears on Protect");while(!label.isClickable()&&label.getParent() instanceof View)label=(View)label.getParent();label.performClick();});waitForIdleSync();check(c.getSharedPreferences("settings",0).getInt("guide_step",-1)==3,"Guide retains step after real screen navigation");}
+            if(step<6){runOnMainSync(()->find(a.getWindow().getDecorView(),"Next step").performClick());waitForIdleSync();check(c.getSharedPreferences("settings",0).getInt("guide_step",-1)==step+1,"Next step persisted");}
+        }
+        check(snapshot(c,"goals").equals(goals),"Guide leaves saved app allowances unchanged");check(snapshot(c,"locks").equals(locks),"Guide leaves protection locks unchanged");
+        runOnMainSync(()->find(a.getWindow().getDecorView(),"Finish setup guide").performClick());waitForIdleSync();check(!c.getSharedPreferences("settings",0).getBoolean("guide_active",true),"Finish exits guide mode");
+    }
     static View find(View view,String text){if(view instanceof TextView&&((TextView)view).getText().toString().equals(text))return view;if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++){View found=find(group.getChildAt(i),text);if(found!=null)return found;}}return null;}
     private String snapshot(Context c,String file){return new TreeMap<String,Object>(c.getSharedPreferences(file,0).getAll()).toString();}
     private String historyHash(Context c)throws Exception{java.security.MessageDigest hash=java.security.MessageDigest.getInstance("SHA-256");try(History db=new History(c);android.database.Cursor cursor=db.getReadableDatabase().rawQuery("SELECT day,pkg,ms,opens,wifi,mobile FROM daily ORDER BY day,pkg",null)){while(cursor.moveToNext()){for(int i=0;i<6;i++)hash.update((String.valueOf(cursor.getString(i))+"\u0000").getBytes("UTF-8"));}}return android.util.Base64.encodeToString(hash.digest(),android.util.Base64.NO_WRAP);}
