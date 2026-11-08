@@ -1,0 +1,4 @@
+const progress=document.querySelector('.page-progress');
+const updateProgress=()=>{const length=document.documentElement.scrollHeight-innerHeight;progress.style.width=(length>0?scrollY/length*100:0)+'%'};addEventListener('scroll',updateProgress,{passive:true});updateProgress();
+if('IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){entry.target.classList.add('enter');observer.unobserve(entry.target)}},{threshold:.1});document.querySelectorAll('.section-heading,.features article,.product-visual,.product-copy,.privacy-band,.steps article,.download-section h2').forEach(el=>observer.observe(el))}
+document.querySelectorAll('a[download]').forEach(link=>link.addEventListener('click',()=>{link.classList.add('download-busy');link.setAttribute('aria-busy','true');setTimeout(()=>{link.classList.remove('download-busy');link.removeAttribute('aria-busy')},1500)}));
