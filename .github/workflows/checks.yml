@@ -21,5 +21,8 @@ jobs:
         run: |
           node --check website/download.js
           node --check website/motion.js
-          test -s website/downloads/Badilika-1.5.2.apk
-          test -s website/sitemap.xml
+          node --check website/ui.js
+          cd website && node build.mjs
+          test -s features.html && test -s protection.html && test -s guide.html && test -s rules.html
+          test -s downloads/Badilika-1.5.2.apk
+          test -s sitemap.xml
