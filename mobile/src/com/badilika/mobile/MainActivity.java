@@ -22,7 +22,7 @@ public class MainActivity extends Activity {
     private final Map<String,java.util.function.LongConsumer> usageViews=new HashMap<>();
     private final Map<String,Long> liveUsage=new HashMap<>();private final Map<String,Long> livePeriods=new HashMap<>();private boolean usageBusy;private long lastUsage;
     private SharedPreferences settings(){return getSharedPreferences("settings",0);}
-    public void onCreate(Bundle state){super.onCreate(state);TimerLocks.grantUpdatePasses(this);tab=getIntent().getStringExtra("screen")==null?"Home":getIntent().getStringExtra("screen");if(state!=null){tab=state.getString("tab","Home");if(tab.equals("Goals"))tab="Timers";from=state.getString("from",from);to=state.getString("to",to);}getWindow().setStatusBarColor(GREEN);getWindow().setNavigationBarColor(BG);show();if(state==null&&!settings().getBoolean("guide_seen",false)){settings().edit().putBoolean("guide_seen",true).apply();handler.post(()->guide(0));}}
+    public void onCreate(Bundle state){super.onCreate(state);boolean offerReset=TimerLocks.prepareUpdateReset(this);tab=getIntent().getStringExtra("screen")==null?"Home":getIntent().getStringExtra("screen");if(state!=null){tab=state.getString("tab","Home");if(tab.equals("Goals"))tab="Timers";from=state.getString("from",from);to=state.getString("to",to);}getWindow().setStatusBarColor(GREEN);getWindow().setNavigationBarColor(BG);show();if(offerReset)handler.post(this::showUpdateReset);else if(state==null&&!settings().getBoolean("guide_seen",false)){settings().edit().putBoolean("guide_seen",true).apply();handler.post(()->guide(0));}}
     private void guide(int step){settings().edit().putBoolean("guide_active",true).putBoolean("guide_interactive_seen",true).putInt("guide_step",Math.max(0,Math.min(6,step))).apply();go("Guide");}
     private void finishGuide(){settings().edit().putBoolean("guide_active",false).apply();go("Home");}
     private void guideHint(){LinearLayout c=card();utility(c,"Continue setup guide","Return to your current step · you can skip anytime","leaf",()->go("Guide"));button(c,"Skip setup for now",this::finishGuide);}
@@ -127,7 +127,31 @@ public class MainActivity extends Activity {
         LinearLayout c=card();cardHeading(c,"Protection setup","settings");disclosure(c,"Connection tips & protection limits","Turn Private DNS and browser Secure DNS off for this DNS-only VPN. Only one VPN can run at a time. Always-on VPN can restart the service; do not enable Block connections without VPN because only DNS is routed. Domain filtering cannot inspect images inside apps. Cached connections, other VPNs, Android permission changes, clearing storage and uninstalling can bypass it. Cooldowns apply inside Badilika.");button(c,"Open VPN settings",()->open(new Intent("android.settings.VPN_SETTINGS")));
     }
     private void connect(){if(!new LockState(this,"porn").enabled()&&!new LockState(this,"escort").enabled()){toast("Enable a protection category first.");return;}Intent consent=VpnService.prepare(this);if(consent!=null)startActivityForResult(consent,10);else ServiceStarter.foreground(this,GuardService.class);}
+    private void showUpdateReset() {
+        if (!TimerLocks.updateResetAvailable(this) || isFinishing()) return;
+        new AlertDialog.Builder(this)
+            .setTitle("Start fresh with app timers?")
+            .setMessage("Clear all app limits, minimum goals and app-timer cooldowns once for this update. Then choose daily limits or repeating windows when you create new timers. Your usage history and porn and escort protection settings will stay as they are.")
+            .setNegativeButton("Later", null)
+            .setPositiveButton("Clear all app timers", (dialog, which) -> {
+                if (!TimerLocks.resetForUpdate(this)) {
+                    toast("Could not finish resetting timers. Reopen Badilika to retry cleanup.");
+                    return;
+                }
+                liveUsage.clear();
+                livePeriods.clear();
+                lastUsage = 0;
+                go("Timers");
+                toast("App timers and their cooldowns cleared.");
+            }).show();
+    }
     private void goals(){
+        if (TimerLocks.updateResetAvailable(this)) {
+            LinearLayout reset = card();
+            cardHeading(reset, "Start fresh with app timers", "clock");
+            note(reset, "Clear saved app timers and their cooldowns once for this update, then set up daily or repeating limits.");
+            button(reset, "Review one-time reset", this::showUpdateReset);
+        }
         heading("YOUR DAILY BOUNDARIES","App timers.","Your daily allowances, at a glance.");
         LinearLayout intro=card();boolean enforcing=AppLimitService.enforcing(this);pill(intro,enforcing?"Automatic closing is on":"Automatic closing needs setup",enforcing);
         button(intro,"Choose an app",this::pickApp);
@@ -163,7 +187,7 @@ public class MainActivity extends Activity {
         if(lock.remaining()>0){new AlertDialog.Builder(this).setTitle("Your limit is still active").setMessage(LockState.duration(lock.remaining())+" remaining. You can reduce your allowance now, or return after the cooldown to loosen or remove it.").setPositiveButton("Keep waiting",null).setNegativeButton("Cancel cooldown",(d,w)->{lock.cancel();show();}).show();return;}
         new AlertDialog.Builder(this).setTitle("Cooldown complete").setMessage("Your current limit remains active until you confirm a change.").setPositiveButton("Change timer",(d,w)->editGoal(pkg)).setNeutralButton("Remove limit",(d,w)->removeTimer(pkg)).setNegativeButton("Keep limit",null).show();
     }
-    private void removeTimer(String pkg){AppBudget old=AppBudget.parse(getSharedPreferences("goals",0).getString(pkg,"0,0"));boolean pass=old.limitMinutes>0&&TimerLocks.hasUpdatePass(this,pkg);if(old.limitMinutes>0&&!pass&&!TimerLocks.ready(this,pkg)){timerCooldown(pkg);return;}new AlertDialog.Builder(this).setTitle("Remove this timer?").setMessage("This removes the allowance and minimum goal for "+label(pkg)+". Your usage history stays saved."+(pass?" This uses your one-time update pass for this timer.":"")).setPositiveButton("Remove",(d,w)->{if(TimerLocks.remove(this,pkg))show();else timerCooldown(pkg);}).setNegativeButton("Keep timer",null).show();}
+    private void removeTimer(String pkg){AppBudget old=AppBudget.parse(getSharedPreferences("goals",0).getString(pkg,"0,0"));if(old.limitMinutes>0&&!TimerLocks.ready(this,pkg)){timerCooldown(pkg);return;}new AlertDialog.Builder(this).setTitle("Remove this timer?").setMessage("This removes the allowance and minimum goal for "+label(pkg)+". Your usage history stays saved.").setPositiveButton("Remove",(d,w)->{if(TimerLocks.remove(this,pkg))show();else timerCooldown(pkg);}).setNegativeButton("Keep timer",null).show();}
     private void pauseTimers(){List<String> apps=TimerLocks.limited(this);boolean ready=true;for(String pkg:apps)if(!TimerLocks.ready(this,pkg))ready=false;
         if(ready){new AlertDialog.Builder(this).setTitle("Pause automatic closing?").setMessage("Your saved timers stay in place, but apps will no longer return to Home at their limit.").setPositiveButton("Pause",(d,w)->{if(TimerLocks.pause(this))show();else toast("A timer cooldown is still active.");}).setNegativeButton("Keep active",null).show();return;}
         new AlertDialog.Builder(this).setTitle("Wait before pausing app limits").setMessage("Every app with an allowance must finish its cooldown before closing can be paused here. Existing countdowns will keep running; new requests start the full selected wait. Review them in App timers. Android can still revoke Accessibility access outside this app.").setPositiveButton("Request cooldowns",(d,w)->{for(String pkg:apps){LockState l=TimerLocks.lock(this,pkg);if(!l.pending())l.request();}go("Timers");}).setNegativeButton("Keep active",null).show();
@@ -259,7 +283,6 @@ public class MainActivity extends Activity {
             repeatOptions.setVisibility(checked ? View.VISIBLE : View.GONE));
         box.addView(repeatOptions);
         LinearLayout optional=column(); optional.setVisibility(View.GONE); button(box,"Optional minimum goal",()->optional.setVisibility(optional.getVisibility()==View.GONE?View.VISIBLE:View.GONE)); box.addView(optional); Switch useMinimum=new Switch(this);useMinimum.setText("Optional minimum goal");useMinimum.setChecked(old.minimumMinutes>0);useMinimum.setPadding(0,dp(16),0,dp(8));optional.addView(useMinimum);Button minClock=addClock(optional,"Minimum goal",min);minClock.setEnabled(useMinimum.isChecked());useMinimum.setOnCheckedChangeListener((b,checked)->minClock.setEnabled(checked));note(box,"Choose a duration, not a time of day. Daily allowances reset at midnight. Automatic closing needs Accessibility permission; minimum goals send reminders while the journal runs.");box.addView(title("Change / removal cooldown",17,GREEN));note(box,"Increasing or removing a limit, changing its window, shortening its cooldown, or pausing all limits requires this wait. Reducing an allowance applies immediately. Existing timers start with a one-day cooldown.");
-        if (TimerLocks.hasUpdatePass(this, pkg)) pill(box, "One-time update pass available", true);
         final Button[] delayButton=new Button[1];button(box,"Choose cooldown · "+LockState.duration(cooldown[0]),()->pickDelay(cooldown[0],0,"App limit cooldown",value->{cooldown[0]=value;delayButton[0].setText("Choose cooldown · "+LockState.duration(value));}));delayButton[0]=(Button)box.getChildAt(box.getChildCount()-1);
         ScrollView scroll=new ScrollView(this);scroll.addView(box);
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle(label(pkg)).setView(scroll).setNegativeButton("Cancel",null).setPositiveButton("Save timer",null).create();dialog.setOnShowListener(d->dialog.getButton(-1).setOnClickListener(v->{try{if((useLimit.isChecked()&&max[0]==0)||(useMinimum.isChecked()&&min[0]==0))throw new IllegalArgumentException();int minimum=useMinimum.isChecked()?min[0]:0;if(useLimit.isChecked()&&old.limitMinutes>0&&max[0]<old.limitMinutes&&minimum>max[0]){minimum=max[0];toast("Minimum goal reduced to match the new allowance.");}boolean repeating=useLimit.isChecked()&&repeat.isChecked();if(repeating&&(window[0]==0||max[0]>window[0])){toast("Choose a window at least as long as the allowed time.");return;}AppBudget budget=new AppBudget(minimum,useLimit.isChecked()?max[0]:0,repeating?window[0]:0,0);if(budget.limitMinutes>0&&AppLimitService.essential(this,pkg)){toast("Timers cannot close system controls or calling apps.");return;}if(!TimerLocks.save(this,pkg,budget,cooldown[0])){dialog.dismiss();timerCooldown(pkg);return;}dialog.dismiss();liveUsage.remove(pkg);livePeriods.remove(pkg);show();if(!AppLimitService.enforcing(this)&&budget.limitMinutes>0)toast("Timer saved. Enable automatic closing to enforce it.");}catch(Exception ex){toast("Choose at least 1 minute. The minimum goal cannot exceed the allowance.");}}));dialog.show();

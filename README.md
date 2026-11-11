@@ -4,7 +4,7 @@
 
 Free, open-source tools for people who want healthier digital habits: porn and escort domain protection, daily app timers and a private usage journal.
 
-[Website](https://badilika.sparkfield.co.ke) · [Download Android 1.7](https://badilika.sparkfield.co.ke/downloads/Badilika-1.7.apk) · [Setup guide](https://badilika.sparkfield.co.ke/guide) · [Protection explained](https://badilika.sparkfield.co.ke/protection)
+[Website](https://badilika.sparkfield.co.ke) · [Download Android 1.8](https://badilika.sparkfield.co.ke/downloads/Badilika-1.8.apk) · [Setup guide](https://badilika.sparkfield.co.ke/guide) · [Protection explained](https://badilika.sparkfield.co.ke/protection)
 
 ![Sunlight through a forest — Badilika’s calmer digital space](website/assets/forest.jpg)
 

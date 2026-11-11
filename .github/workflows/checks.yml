@@ -24,5 +24,5 @@ jobs:
           node --check website/ui.js
           cd website && node build.mjs
           test -s features.html && test -s protection.html && test -s guide.html && test -s rules.html
-          test -s downloads/Badilika-1.7.apk
+          test -s downloads/Badilika-1.8.apk
           test -s sitemap.xml
