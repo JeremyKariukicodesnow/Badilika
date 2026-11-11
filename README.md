@@ -4,7 +4,7 @@
 
 Free, open-source tools for people who want healthier digital habits: porn and escort domain protection, daily app timers and a private usage journal.
 
-[Website](https://badilika.sparkfield.co.ke) · [Download Android 1.6](https://badilika.sparkfield.co.ke/downloads/Badilika-1.6.apk) · [Setup guide](https://badilika.sparkfield.co.ke/guide) · [Protection explained](https://badilika.sparkfield.co.ke/protection)
+[Website](https://badilika.sparkfield.co.ke) · [Download Android 1.7](https://badilika.sparkfield.co.ke/downloads/Badilika-1.7.apk) · [Setup guide](https://badilika.sparkfield.co.ke/guide) · [Protection explained](https://badilika.sparkfield.co.ke/protection)
 
 ![Sunlight through a forest — Badilika’s calmer digital space](website/assets/forest.jpg)
 
@@ -17,7 +17,7 @@ Free, open-source tools for people who want healthier digital habits: porn and e
 | Porn protection | Local adult-domain rules, subdomain matching, validated list updates and Cloudflare Family DNS while enabled. |
 | Escort protection | An independently enabled curated escort/adult-classified domain list. |
 | Protection cooldowns | Separate disable delays of 1–30 days; wait, then explicitly confirm switching off. |
-| Daily app timers | Choose a daily duration using an alarm-style clock and see used/remaining time. |
+| Daily app timers | Choose a daily duration or repeating window using an alarm-style clock. See used and remaining time and when the allowance resets. |
 | Automatic closing | With Usage access and Accessibility, return selected apps to Home at their daily allowance. |
 | Timer change cooldowns | Reductions apply immediately; increasing, disabling or removing limits requires a completed wait. |
 | Insights | App time, phone activity and Wi-Fi/mobile totals with date filters and local history. |
@@ -42,10 +42,10 @@ See the [full setup guide](https://badilika.sparkfield.co.ke/guide), [features](
 
 ## Rules and practical limits
 
-- Daily allowances reset at local midnight and include earlier usage that day. Date/timezone changes can affect reporting.
+- Daily allowances reset at local midnight and include earlier usage that day. Repeating windows start when the schedule is saved and renew at each window boundary. Date/timezone changes can affect reporting.
 - Protection stays active during a disable request and until confirmation. Cancel a countdown to keep protection; a later request starts the complete wait again.
 - Cooldowns use monotonic elapsed device time. Powered-off time does not count.
-- Android settings can revoke permissions, force-stop, clear data or uninstall the app. Badilika is a voluntary tool, not a device-management lock.
+- Android settings can revoke permissions, force-stop, clear data or uninstall the app. Optional device administrator access adds a step before uninstalling. Deactivate it under Device admin apps in Android Settings.
 - Automatic closing returns an app to Home; it does not force-stop its process. Background playback/downloads can continue.
 - Domain filtering is incomplete. It cannot inspect content inside ordinary apps, and cached connections, proxies, competing VPNs and encrypted DNS can bypass it.
 - Turn off system Private DNS and browser Secure DNS for best coverage. Only one VPN can run at a time. **Do not enable “Block connections without VPN”** for this DNS-only implementation.

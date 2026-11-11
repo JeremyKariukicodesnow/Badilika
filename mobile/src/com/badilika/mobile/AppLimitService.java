@@ -57,19 +57,28 @@ public class AppLimitService extends AccessibilityService {
         busy=true;
         worker.execute(()->{
             try{
-                final long now=System.currentTimeMillis(),used=DailyUsage.read(this,pkg,now);
+                final long now=System.currentTimeMillis(),used=DailyUsage.read(this,pkg,now,budget);
                 handler.post(()->{
                     try{
                         if(!alive||!foreground.equals(pkg)||!getSystemService(PowerManager.class).isInteractive()||getSystemService(KeyguardManager.class).isKeyguardLocked()||!getSharedPreferences("settings",0).getBoolean("limitsEnabled",false))return;
                         // Re-read after the background query: editing/removing a timer applies immediately.
                         AppBudget current=AppBudget.parse(getSharedPreferences("goals",0).getString(pkg,"0,0"));
-                        if(!History.day(now).equals(History.day(System.currentTimeMillis()))||!current.exhausted(used))return;
+                        long currentTime = System.currentTimeMillis();
+                        long periodStart = budget.windowStart(now, History.midnight(now));
+                        if (current.windowMinutes != budget.windowMinutes || current.windowAnchor != budget.windowAnchor
+                                || current.windowStart(currentTime, History.midnight(currentTime)) != periodStart
+                                || !current.exhausted(used)) return;
                         if(SystemClock.elapsedRealtime()-lastHome<1200)return;
                         if(performGlobalAction(GLOBAL_ACTION_HOME)){
                             lastHome=SystemClock.elapsedRealtime();String name=pkg;try{name=getPackageManager().getApplicationLabel(getPackageManager().getApplicationInfo(pkg,0)).toString();}catch(Exception ignored){}
-                            Toast.makeText(this,name+": your "+AppBudget.label(current.limitMinutes)+" daily limit is used. Available again tomorrow.",Toast.LENGTH_LONG).show();
-                            String day=History.day(now);SharedPreferences sent=getSharedPreferences("sent",0);String key=day+pkg+"enforced";
-                            if(!sent.getBoolean(key,false)){Notices.send(this,key.hashCode(),name+" • daily time is up","Returned to Home. Your daily allowance resets at midnight.");sent.edit().putBoolean(key,true).apply();}
+                            String reset = current.repeats() ? "Your allowance resets at the next window." : "Your daily allowance resets at midnight.";
+                            Toast.makeText(this,name+": your "+AppBudget.label(current.limitMinutes)+" allowance is used. "+reset,Toast.LENGTH_LONG).show();
+                            SharedPreferences sent=getSharedPreferences("sent",0);
+                            String key = "enforced." + pkg;
+                            if (sent.getLong(key, -1) != periodStart) {
+                                Notices.send(this,key.hashCode(),name+" • time is up","Returned to Home. "+reset);
+                                sent.edit().putLong(key, periodStart).apply();
+                            }
                         }
                     }finally{busy=false;}
                 });

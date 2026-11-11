@@ -15,6 +15,9 @@ public class IntegrationRunner extends Instrumentation {
     public void onCreate(Bundle args){super.onCreate(args);if(args!=null)mode=args.getString("mode","full");start();}
     public void onStart(){Bundle result=new Bundle();try{
         Context c=getTargetContext();
+        if(mode.equals("short-cooldown")){testShortCooldown(c);result.putString("stream","PASS: "+checks+" short cooldown checks\n");finish(Activity.RESULT_OK,result);return;}
+        if(mode.equals("update-pass")){testUpdatePass(c);result.putString("stream","PASS: "+checks+" update pass and repeating window checks\n");finish(Activity.RESULT_OK,result);return;}
+        if(mode.equals("admin-request")){testAdminRequest(c);result.putString("stream","PASS: "+checks+" administrator setup checks\n");finish(Activity.RESULT_OK,result);return;}
         if(mode.equals("guide")){testGuide(c);result.putString("stream","PASS: "+checks+" interactive guide checks\n");finish(Activity.RESULT_OK,result);return;}
         if(mode.equals("ui-seed")){c.getSharedPreferences("goals",0).edit().clear().putString("com.badilika.timerfixture","0,30").commit();c.getSharedPreferences("settings",0).edit().putBoolean("limitsEnabled",false).commit();TimerLocks.lock(c,"com.badilika.timerfixture").cancel();result.putString("stream","PASS: isolated UI fixture prepared");finish(Activity.RESULT_OK,result);return;}
         if(mode.startsWith("upgrade-")){upgrade(c,mode.equals("upgrade-seed"));result.putString("stream","PASS: "+checks+" "+mode+" checks\n");finish(Activity.RESULT_OK,result);return;}
@@ -39,6 +42,66 @@ public class IntegrationRunner extends Instrumentation {
         testAppTimer(c);
         result.putString("stream","PASS: "+checks+" Android integration checks\n");finish(Activity.RESULT_OK,result);
     }catch(Throwable ex){result.putString("stream","FAIL after "+checks+" checks: "+android.util.Log.getStackTraceString(ex));finish(Activity.RESULT_CANCELED,result);}}
+    private void testAdminRequest(Context c) throws Exception {
+        c.getSharedPreferences("settings", 0).edit().putBoolean("guide_seen", true).commit();
+        Activity activity = startActivitySync(new Intent()
+            .setClassName(c.getPackageName(), "com.badilika.mobile.MainActivity")
+            .putExtra("screen", "Settings").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        waitForIdleSync();
+        ActivityMonitor consent = addMonitor(new IntentFilter(
+            android.app.admin.DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN), null, false);
+        runOnMainSync(() -> {
+            View button = find(activity.getWindow().getDecorView(), "Enable uninstall protection");
+            check(button != null, "Administrator setup is available and initially off");
+            button.performClick();
+        });
+        check(consent.getHits() == 1, "Button launches Android administrator consent");
+        removeMonitor(consent);
+        android.app.admin.DevicePolicyManager policy = c.getSystemService(android.app.admin.DevicePolicyManager.class);
+        check(!policy.isAdminActive(new ComponentName(c, UninstallAdminReceiver.class)), "Consent is required before activation");
+    }
+    private void testUpdatePass(Context target) {
+        Context c = new ContextWrapper(target) {
+            @Override public SharedPreferences getSharedPreferences(String name, int mode) {
+                return super.getSharedPreferences("test-v17-" + name, mode);
+            }
+        };
+        SharedPreferences goals = c.getSharedPreferences("goals", 0);
+        goals.edit().clear().putString("example.first", "0,30").putString("example.second", "0,20").commit();
+        c.getSharedPreferences("locks", 0).edit().clear().commit();
+        TimerLocks.grantUpdatePasses(c);
+        check(TimerLocks.hasUpdatePass(c, "example.first"), "Existing timer receives one pass");
+        check(TimerLocks.save(c, "example.first", new AppBudget(0, 30, 300, 0), 95 * 60000L),
+            "Pass allows converting existing daily timer to repeating and shortening its cooldown");
+        AppBudget saved = AppBudget.parse(goals.getString("example.first", ""));
+        check(saved.repeats() && saved.windowMinutes == 300 && saved.windowAnchor > 0, "Repeating schedule persists");
+        check(saved.windowStart(saved.windowAnchor + 299 * 60000L, 0) == saved.windowAnchor, "Allowance uses the current window");
+        check(saved.windowStart(saved.windowAnchor + 300 * 60000L, 0) == saved.windowAnchor + 300 * 60000L, "Allowance resets at the next window");
+        check(!TimerLocks.hasUpdatePass(c, "example.first"), "First timer's pass is consumed");
+        check(!TimerLocks.save(c, "example.first", new AppBudget(0, 40, 300, 0), 95 * 60000L), "Later increase requires a cooldown");
+        check(TimerLocks.save(c, "example.first", new AppBudget(0, 15, 300, 0), 95 * 60000L), "Lowering the allowance still applies immediately");
+        check(AppBudget.parse(goals.getString("example.first", "")).windowAnchor == saved.windowAnchor, "Editing allowance preserves the reset schedule");
+        check(TimerLocks.remove(c, "example.second"), "Second timer can use its own pass to remove");
+        check(TimerLocks.save(c, "example.new", new AppBudget(0, 10), 60000), "New timer saves");
+        TimerLocks.grantUpdatePasses(c);
+        check(!TimerLocks.hasUpdatePass(c, "example.new") && !TimerLocks.hasUpdatePass(c, "example.first"), "Reopening grants no additional passes");
+    }
+    private void testShortCooldown(Context c) {
+        String pkg = "com.badilika.shortcooldownfixture";
+        long delay = 95 * 60000L;
+        check(TimerLocks.save(c, pkg, new AppBudget(0, 30), delay), "Initial timer saves");
+        LockState lock = TimerLocks.lock(c, pkg);
+        check(lock.delayMs() == delay, "Hour-and-minute duration persists");
+        check(!TimerLocks.save(c, pkg, new AppBudget(0, 60), delay), "Increase requires cooldown");
+        check(!TimerLocks.remove(c, pkg), "Removal requires cooldown");
+        check(!TimerLocks.save(c, pkg, new AppBudget(0, 30), 60000), "Shortening cooldown requires a wait");
+        check(TimerLocks.save(c, pkg, new AppBudget(0, 15), delay), "Reduction applies immediately");
+        lock.request();
+        check(lock.remaining() > delay - 10000 && lock.remaining() <= delay, "Countdown starts at the selected duration");
+        check(!TimerLocks.remove(c, pkg), "Removal stays locked while countdown runs");
+        c.getSharedPreferences("locks", 0).edit().putLong("timer." + pkg + ".remaining", 0).commit();
+        check(TimerLocks.remove(c, pkg), "Removal succeeds after cooldown");
+    }
     private void testGuide(Context c)throws Exception{
         String goals=snapshot(c,"goals"),locks=snapshot(c,"locks");
         c.getSharedPreferences("settings",0).edit().putBoolean("guide_seen",true).putBoolean("guide_active",true).putInt("guide_step",0).commit();

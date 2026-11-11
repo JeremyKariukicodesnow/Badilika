@@ -1,5 +1,15 @@
 # Badilika for Android — Java edition
 
+## Version 1.7
+
+**Settings → Uninstall protection** opens Android's optional device administrator activation screen. Once enabled, deactivate Badilika in Android Settings under **Device admin apps** before uninstalling. This adds a deliberate step without requesting device policies.
+
+**App timers → Change timer → Choose cooldown** accepts waits from one minute to 30 days. Set days to zero for an hours-and-minutes wait. Increasing or removing an allowance still requires the configured wait. Porn and escort protection retain their separate one-day minimum.
+
+The first launch of this update gives each existing app timer one pass. Save an increase or a shorter cooldown, or confirm removal, to use that timer's pass without waiting. Reducing an allowance with the same cooldown keeps the pass available. New timers follow their configured cooldowns.
+
+Enable **Repeat every few hours** in a timer editor to choose a repeating window. For example, choose 30 minutes of allowed time and a five-hour window. The first window starts when you save its schedule. Unused time expires at each reset. Switching between daily and repeating limits or changing the window length requires a cooldown or the one-time pass.
+
 ## Version 1.6: interactive setup
 
 Open **Settings → Setup guide** for seven visual steps with live status, numbered instructions, progress buttons and direct actions. Usage access, Accessibility, VPN, network, notification and app settings open the relevant Android controls where supported. Protection and timer actions open the real Badilika screens; **Continue setup guide** returns to the saved step.

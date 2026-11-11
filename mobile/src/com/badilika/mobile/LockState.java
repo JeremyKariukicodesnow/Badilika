@@ -13,8 +13,11 @@ public final class LockState {
     public LockState(Context c, String key) { this.c=c; this.key=key; p=c.getSharedPreferences("locks",0); }
     public boolean enabled() { return p.getBoolean(key+".enabled", false); }
     public void enable() { p.edit().putBoolean(key+".enabled",true).remove(key+".remaining").commit(); }
-    public long delayMs() { return TimePolicy.delay(p.getLong(key+".delayMs",TimePolicy.days(p.getInt(key+".days",1))*DAY)); }
-    public void setDelayMs(long delay) { if(!pending())p.edit().putLong(key+".delayMs",TimePolicy.delay(delay)).commit(); }
+    private long clampDelay(long duration) {
+        return key.startsWith("timer.") ? TimePolicy.timerDelay(duration) : TimePolicy.delay(duration);
+    }
+    public long delayMs() { return clampDelay(p.getLong(key+".delayMs",TimePolicy.days(p.getInt(key+".days",1))*DAY)); }
+    public void setDelayMs(long delay) { if(!pending())p.edit().putLong(key+".delayMs",clampDelay(delay)).commit(); }
     public int days() { return (int)(delayMs()/DAY); }
     public void setDays(int days) { setDelayMs(TimePolicy.days(days)*DAY); }
     public boolean pending() { return p.contains(key+".remaining"); }

@@ -8,7 +8,10 @@ import java.util.*;
 public final class DailyUsage {
     private DailyUsage(){}
     public static long read(Context c,String pkg,long now){
-        long start=History.midnight(now);
+        return read(c, pkg, now, new AppBudget(0, 0));
+    }
+    public static long read(Context c, String pkg, long now, AppBudget budget) {
+        long start = budget.windowStart(now, History.midnight(now));
         Calendar prior=Calendar.getInstance();prior.setTimeInMillis(start);prior.add(Calendar.DATE,-1);
         UsageEvents events=c.getSystemService(UsageStatsManager.class).queryEvents(prior.getTimeInMillis(),now);
         UsageEvents.Event event=new UsageEvents.Event();ForegroundClock clock=new ForegroundClock(start,now);

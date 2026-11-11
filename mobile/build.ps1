@@ -1,8 +1,8 @@
 param(
     [string]$Sdk = "$env:LOCALAPPDATA/Android/Sdk",
     [string]$JavaHome = 'C:/Program Files/Android/Android Studio1/jbr',
-    [string]$VersionName = '1.6',
-    [int]$VersionCode = 11
+    [string]$VersionName = '1.7',
+    [int]$VersionCode = 12
 )
 $ErrorActionPreference = 'Stop'
 $env:JAVA_HOME = $JavaHome
